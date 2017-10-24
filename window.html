@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>WebView sample</title>
+    <link href="index.css" rel="stylesheet">
+</head>
+<body>
+	<div id="wrapper">
+      <div id="contentWrapper">
+        <webview id="content" src="https://m.magicbricks.com" autosize="on"></webview>
+      </div>
+    </div>
+    <!--Dialog For USB events-->
+    <!--USB Insertion-->
+    <dialog id="dialogInsertUSB" class="usbDialog">
+      <h1>USB Inserted</h1>
+      <div>
+        <p>This is the dialog content</p>
+        <button id="insertClose">Close</button>
+      </div>
+    </dialog>
+    <!--USB Removal-->
+    <dialog id="dialogRemovedUSB" class="usbDialog">
+      <h1>USB Removed</h1>
+      <div>
+        <p>This is the dialog content</p>
+        <button id="removeClose">Close</button>
+      </div>
+    </dialog>
+
+    <script src="index.js"></script>
+    <script src="dialog.js"></script>
+</body>
+</html>
