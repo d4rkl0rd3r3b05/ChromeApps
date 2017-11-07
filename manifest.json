@@ -19,6 +19,14 @@
 		"alwaysOnTopWindows",
 		"webview",
 		"geolocation", 
-		"usb"
+		"usb",
+		{
+			"usbDevices" : [
+						      {
+						        "vendorId": 1908,
+						        "productId": 1320
+						      }
+						    ]
+		}
 	]
 }

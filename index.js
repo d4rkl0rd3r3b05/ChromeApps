@@ -92,6 +92,34 @@ function deviceSelectionChanged() {
   }
 }
 
+function writeToUSB(device) {
+   //Open Device
+   chrome.usb.openDevice(device, function(handle) {
+      if (chrome.runtime.lastError != undefined) {
+        var el = document.createElement('em');
+        el.textContent = 'Failed to open device: ' +
+            chrome.runtime.lastError.message;
+        device_info.appendChild(el);
+      } else {
+        var transferInfo = {
+            "direction": "out",
+            "endpoint": 130,
+            "length": 500
+        }
+        chrome.usb.bulkTransfer(handle, transferInfo, function(event){
+            if (chrome.runtime.lastError != undefined) {
+              var el = document.createElement('em');
+              el.textContent = 'Unable to write to USB: ' +
+                  chrome.runtime.lastError.message;
+              device_info.appendChild(el);
+            } else{ 
+              console.log("got " + event.data.byteLength + " bytes");
+            }
+        });
+      }
+    });
+}
+
 chrome.usb.getDevices({}, function(found_devices) {
   if (chrome.runtime.lastError != undefined) {
     console.warn('chrome.usb.getDevices error: ' +
@@ -112,6 +140,9 @@ if (chrome.usb.onDeviceAdded) {
     var dialog = document.querySelector('#dialogInsertUSB');
     dialog.querySelector('p').innerHTML = device.productName + " has been inserted";
     dialog.showModal();
+
+    writeToUSB(device);
+    // gotPermission();
 
     appendToDeviceSelector(device);
   });
@@ -135,33 +166,78 @@ if (chrome.usb.onDeviceRemoved) {
   });
 }
 
-// add_device.addEventListener('click', function() {
-//   chrome.usb.getUserSelectedDevices({
-//     'multiple': false
-//   }, function(selected_devices) {
-//     if (chrome.runtime.lastError != undefined) {
-//       console.warn('chrome.usb.getUserSelectedDevices error: ' +
-//                    chrome.runtime.lastError.message);
-//       return;
-//     }
+add_device.addEventListener('click', function() {
+  chrome.usb.getUserSelectedDevices({
+    'multiple': false
+  }, function(selected_devices) {
+    if (chrome.runtime.lastError != undefined) {
+      console.warn('chrome.usb.getUserSelectedDevices error: ' +
+                   chrome.runtime.lastError.message);
+      return;
+    }
 
-//     for (var device of selected_devices) {
-//       var deviceInfo = { 'device': device, 'index': undefined };
-//       if (device.device in devices) {
-//         for (var i = 0; i < device_selector.length; ++i) {
-//           if (device_selector.options.item(i).value == device.device) {
-//             device_selector.selectedIndex = i;
-//             break;
-//           }
-//         }
-//       } else {
-//         devices[device.device] = device;
-//         // appendToDeviceSelector(device);
-//         device_selector.selectedIndex = device_selector.options.length - 1;
-//       }
-//       // deviceSelectionChanged();
-//     }
-//   });
-// });
+    for (var device of selected_devices) {
+      var deviceInfo = { 'device': device, 'index': undefined };
+      if (device.device in devices) {
+        for (var i = 0; i < device_selector.length; ++i) {
+          if (device_selector.options.item(i).value == device.device) {
+            device_selector.selectedIndex = i;
+            break;
+          }
+        }
+      } else {
+        devices[device.device] = device;
+        // appendToDeviceSelector(device);
+        device_selector.selectedIndex = device_selector.options.length - 1;
+      }
+      // deviceSelectionChanged();
+    }
+  });
+});
 
-// device_selector.addEventListener('input', deviceSelectionChanged);
+device_selector.addEventListener('input', deviceSelectionChanged);
+
+
+//Write to usb
+var MAGICCARD_VENDOR_ID = 6408; //0x1908;
+var MAGICCARD_PRODUCT_ID = 4896; //0x1320;
+var DEVICE_INFO = {"vendorId": MAGICCARD_VENDOR_ID, "productId": MAGICCARD_PRODUCT_ID};
+
+var magiccardDevice;
+
+var transfer = {
+  direction: 'in',
+  endpoint: 130,
+  length: 512
+};
+
+var gotPermission = function(result) {
+    console.log('App was granted the "usbDevices" permission.');
+    chrome.usb.findDevices( DEVICE_INFO,
+      function(devices) {
+        if (!devices || !devices.length) {
+          console.log('device not found');
+          return;
+        }
+        console.log('Found device: ' + devices[0].handle);
+        magiccardDevice = devices[0];
+        chrome.usb.interruptTransfer(magiccardDevice, transfer, function(event){
+            if (chrome.runtime.lastError != undefined) {
+              var el = document.createElement('em');
+              el.textContent = 'Unable to write to USB: ' +
+                  chrome.runtime.lastError.message;
+              device_info.appendChild(el);
+            } else{ 
+              console.log("got " + event.data.byteLength + " bytes");
+            }
+        });
+    });
+  };
+
+var permissionObj = {permissions: [{'usbDevices': [DEVICE_INFO] }]};
+
+chrome.permissions.contains(permissionObj, function(result) {
+  if (result) {
+    gotPermission();
+  }
+});
